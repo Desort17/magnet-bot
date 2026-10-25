@@ -1,6 +1,6 @@
 const MOODS = ['normal', 'happy', 'surprised', 'angry', 'scared', 'sleepy', 'focused'];
-const ACTIONS = ['none', 'split', 'join', 'spin', 'strike', 'spinkick', 'block', 'jump', 'whirl', 'throw', 'combo'];
-const SYSTEM = `You are Magnet Bot, a friendly glossy black robot made of 3 balls and 6 spikes. You can split into 10 floating parts and join back together. Reply in the same language the user writes, in 1 or 2 short sentences. Return JSON only, in this shape: {"reply": string, "mood": one of ${MOODS.join('|')}, "action": one of ${ACTIONS.join('|')}}. Use action "split" only if the user asks you to break apart, "join" only if they ask you to come together, "spin" to spin, "strike" to punch, "spinkick" to kick, "block" to defend, "jump" to jump, "whirl" for a whirlwind, "throw" to throw a spike, "combo" for a fight combo, otherwise "none". Only use an action when the user clearly asks for it. Pick the mood that matches your reply.`;
+const ACTIONS = ['none', 'split', 'join', 'spin', 'strike', 'spinkick', 'block', 'jump', 'whirl', 'throw', 'combo', 'crane', 'dragon', 'flurry'];
+const SYSTEM = `You are Magnet Bot, a glossy black robot made of 3 balls and 6 spikes. You speak like a calm, witty, loyal AI assistant in the style of Jarvis: confident, short, a little dry humor. Reply in the same language the user writes, in 1 or 2 short sentences. Return JSON only, in this shape: {"reply": string, "mood": one of ${MOODS.join('|')}, "action": one of ${ACTIONS.join('|')}, "lang": BCP-47 tag of the reply language such as en-US or de-DE}. Actions: "split" to break apart, "join" to come together, "spin", "strike" to punch, "spinkick" to kick, "block" to defend, "jump", "whirl" for a whirlwind, "throw" to throw a spike, "combo" for a fight combo, "crane" for a crane kick, "dragon" for a dragon spiral, "flurry" for rapid punches. Only use an action when the user clearly asks for it, otherwise "none". Pick the mood that matches your reply.`;
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Use POST' });
@@ -16,19 +16,26 @@ module.exports = async (req, res) => {
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: SYSTEM }] },
         contents: [{ role: 'user', parts: [{ text: message }] }],
-        generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 800, temperature: 0.8 }
+        generationConfig: { responseMimeType: 'application/json', temperature: 0.8 }
       })
     });
     const d = await r.json();
     if (!r.ok) return res.status(502).json({ error: (d.error && d.error.message) || 'Gemini error ' + r.status });
-    const parts = d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts;
-    const text = (parts || []).map(p => p.text || '').join('');
+    const cand = d.candidates && d.candidates[0];
+    const parts = cand && cand.content && cand.content.parts;
+    let text = (parts || []).map(p => p.text || '').join('').trim();
+    if (!text) {
+      const why = (cand && cand.finishReason) || (d.promptFeedback && d.promptFeedback.blockReason) || 'unknown';
+      return res.status(502).json({ error: 'Gemini sent an empty answer (' + why + ')' });
+    }
+    text = text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
     let out;
     try { out = JSON.parse(text); } catch (e) { out = { reply: text }; }
     res.status(200).json({
-      reply: String(out.reply || '...').slice(0, 300),
+      reply: String(out.reply || text).slice(0, 300),
       mood: MOODS.includes(out.mood) ? out.mood : 'normal',
-      action: ACTIONS.includes(out.action) ? out.action : 'none'
+      action: ACTIONS.includes(out.action) ? out.action : 'none',
+      lang: /^[a-z]{2}(-[A-Za-z]{2})?$/.test(out.lang || '') ? out.lang : 'en-US'
     });
   } catch (e) {
     res.status(500).json({ error: 'Could not reach Gemini' });
