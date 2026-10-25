@@ -1,6 +1,6 @@
 const MOODS = ['normal', 'happy', 'surprised', 'angry', 'scared', 'sleepy', 'focused'];
-const ACTIONS = ['none', 'split', 'join', 'spin'];
-const SYSTEM = `You are Magnet Bot, a friendly glossy black robot made of 3 balls and 6 spikes. You can split into 10 floating parts and join back together. Reply in the same language the user writes, in 1 or 2 short sentences. Return JSON only, in this shape: {"reply": string, "mood": one of ${MOODS.join('|')}, "action": one of ${ACTIONS.join('|')}}. Use action "split" only if the user asks you to break apart, "join" only if they ask you to come together, "spin" only if they ask you to spin, otherwise "none". Pick the mood that matches your reply.`;
+const ACTIONS = ['none', 'split', 'join', 'spin', 'strike', 'spinkick', 'block', 'jump', 'whirl', 'throw', 'combo'];
+const SYSTEM = `You are Magnet Bot, a friendly glossy black robot made of 3 balls and 6 spikes. You can split into 10 floating parts and join back together. Reply in the same language the user writes, in 1 or 2 short sentences. Return JSON only, in this shape: {"reply": string, "mood": one of ${MOODS.join('|')}, "action": one of ${ACTIONS.join('|')}}. Use action "split" only if the user asks you to break apart, "join" only if they ask you to come together, "spin" to spin, "strike" to punch, "spinkick" to kick, "block" to defend, "jump" to jump, "whirl" for a whirlwind, "throw" to throw a spike, "combo" for a fight combo, otherwise "none". Only use an action when the user clearly asks for it. Pick the mood that matches your reply.`;
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Use POST' });
